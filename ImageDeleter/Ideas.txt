@@ -1,0 +1,1 @@
+Now if the folder is empty after deleting .jpg & .png formated images, then the folder should also be deleted.
