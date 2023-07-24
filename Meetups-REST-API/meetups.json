@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "title": "Meetup 1",
+    "summary": "Summary 1",
+    "address": "Addrerss 1"
+  },
+  {
+    "id": 2,
+    "title": "Meetup 2",
+    "summary": "Summary 2",
+    "address": "Addrerss 2"
+  }
+]
