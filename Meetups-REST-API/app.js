@@ -3,7 +3,24 @@ const bodyParser = require("body-parser");
 
 const fs = require("fs");
 const path = require("path");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const meetupsFilePath = path.join(__dirname, "meetups.json");
+const usersFilePath = path.join(__dirname, "users.json");
+const jwtSecret = "TheSecretKey";
+
+function readUsersFromFile() {
+  try {
+    const data = fs.readFileSync(usersFilePath, "utf8");
+    return JSON.parse(data);
+  } catch (err) {
+    return [];
+  }
+}
+
+function writoUsersToFile(users) {
+  fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,6 +54,50 @@ function validateMeetupDate(meetup) {
 }
 
 // Routes
+
+app.post("/signup", async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    res.status(400).json({ message: "Invalid email or password" });
+    return;
+  }
+
+  const users = readUsersFromFile();
+  const existingUser = users.find((user) => user.email === email);
+
+  if (existingUser) {
+    res.status(409).json({ message: "Email already exists" });
+    return;
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const newUser = { email, password: hashedPassword };
+  users.push(newUser);
+  writoUsersToFile(users);
+
+  const token = jwt.sign({ email }, jwtSecret, { expiresIn: "1h" });
+  res.status(201).json({ token, email });
+});
+
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    res.status(400).json({ message: "Invalid email or password" });
+    return;
+  }
+
+  const users = readUsersFromFile();
+  const user = users.find((u) => u.email === email);
+
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    res.status(401).json({ message: "Invalid email or password" });
+    return;
+  }
+
+  const token = jwt.sign({ email }, jwtSecret, { expiresIn: "1h" });
+  res.status(200).json({ token, email });
+});
+
 app.post("/meetups", (req, res) => {
   const { title, summary, address } = req.body;
 
