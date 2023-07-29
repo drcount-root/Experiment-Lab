@@ -9,6 +9,14 @@ const meetupsFilePath = path.join(__dirname, "meetups.json");
 const usersFilePath = path.join(__dirname, "users.json");
 const jwtSecret = "TheSecretKey";
 
+class ErrorHandler extends Error {
+  constructor(statusCode, message) {
+    super();
+    this.statusCode = statusCode;
+    this.message = message;
+  }
+}
+
 function readUsersFromFile() {
   try {
     const data = fs.readFileSync(usersFilePath, "utf8");
@@ -44,15 +52,25 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 function authenticateJWT(req, res, next) {
   const token = req.header("Authorization")?.split(" ")[1];
+  // if (!token) {
+  //   return res
+  //     .status(401)
+  //     .json({ message: "Access denied, no token provided" });
+  // }
+
   if (!token) {
-    return res
-      .status(401)
-      .json({ message: "Access denied, no token provided" });
+    next(new ErrorHandler(401, "Access denied, no token provided"));
+    return;
   }
 
   jwt.verify(token, jwtSecret, (err, user) => {
+    // if (err) {
+    //   return res.status(403).json({ message: "Invalid token" });
+    // }
+
     if (err) {
-      return res.status(403).json({ message: "Invalid token" });
+      next(new ErrorHandler(403, "Invalid token"));
+      return;
     }
     res.user = user;
     next();
@@ -72,18 +90,28 @@ function validateMeetupData(meetup) {
 
 // Routes
 
-app.post("/signup", async (req, res) => {
+app.post("/signup", async (req, res, next) => {
   const { email, password } = req.body;
+  // if (!email || !password) {
+  //   res.status(400).json({ message: "Invalid email or password" });
+  //   return;
+  // }
+
   if (!email || !password) {
-    res.status(400).json({ message: "Invalid email or password" });
+    next(new ErrorHandler(400, "Invalid email or password"));
     return;
   }
 
   const users = readUsersFromFile();
   const existingUser = users.find((user) => user.email === email);
 
+  // if (existingUser) {
+  //   res.status(409).json({ message: "Email already exists" });
+  //   return;
+  // }
+
   if (existingUser) {
-    res.status(409).json({ message: "Email already exists" });
+    next(new ErrorHandler(409, "Email already exists"));
     return;
   }
 
@@ -96,18 +124,28 @@ app.post("/signup", async (req, res) => {
   res.status(201).json({ token, email });
 });
 
-app.post("/login", async (req, res) => {
+app.post("/login", async (req, res, next) => {
   const { email, password } = req.body;
+  // if (!email || !password) {
+  //   res.status(400).json({ message: "Invalid email or password" });
+  //   return;
+  // }
+
   if (!email || !password) {
-    res.status(400).json({ message: "Invalid email or password" });
+    next(new ErrorHandler(400, "Invalid email or password"));
     return;
   }
 
   const users = readUsersFromFile();
   const user = users.find((u) => u.email === email);
 
+  // if (!user || !(await bcrypt.compare(password, user.password))) {
+  //   res.status(401).json({ message: "Invalid email or password" });
+  //   return;
+  // }
+
   if (!user || !(await bcrypt.compare(password, user.password))) {
-    res.status(401).json({ message: "Invalid email or password" });
+    next(new ErrorHandler(401, "Invalid email or password"));
     return;
   }
 
@@ -115,11 +153,12 @@ app.post("/login", async (req, res) => {
   res.status(200).json({ token, email });
 });
 
-app.post("/meetups",authenticateJWT, (req, res) => {
+app.post("/meetups", authenticateJWT, (req, res, next) => {
   const { title, summary, address } = req.body;
 
   if (!validateMeetupData({ title, summary, address })) {
-    res.status(400).json({ message: "Invalid meetup data" });
+    // res.status(400).json({ message: "Invalid meetup data" });
+    next(new ErrorHandler(400, "Invalid meetup data"));
     return;
   } else {
     const meetups = readMeetupsFromFile();
@@ -141,12 +180,13 @@ app.get("/meetups", (req, res) => {
   console.log("\nResponse\n", meetups);
 });
 
-app.patch("/meetups/:id", authenticateJWT,(req, res) => {
+app.patch("/meetups/:id", authenticateJWT, (req, res, next) => {
   const { id } = req.params;
   const { title, summary, address } = req.body;
 
   if (!validateMeetupData({ title, summary, address })) {
-    res.status(400).json({ message: "Unable to update meetup data" });
+    // res.status(400).json({ message: "Unable to update meetup data" });
+    next(new ErrorHandler(400, "Unable to update meetup data"));
     return;
   } else {
     let meetups = readMeetupsFromFile();
@@ -154,7 +194,9 @@ app.patch("/meetups/:id", authenticateJWT,(req, res) => {
       (meetup) => meetup.id === parseInt(id)
     );
     if (meetupIndex === -1) {
-      res.status(404).json({ message: `Meetup with id ${id} not found` });
+      // res.status(404).json({ message: `Meetup with id ${id} not found` });
+      next(new ErrorHandler(404, `Meetup with id ${id} not found`));
+      return;
     } else {
       meetups[meetupIndex] = {
         ...meetups[meetupIndex],
@@ -171,12 +213,14 @@ app.patch("/meetups/:id", authenticateJWT,(req, res) => {
   }
 });
 
-app.delete("/meetups/:id", authenticateJWT,(req, res) => {
+app.delete("/meetups/:id", authenticateJWT, (req, res, next) => {
   const { id } = req.params;
   let meetups = readMeetupsFromFile();
   const meetupIndex = meetups.findIndex((meetup) => meetup.id === parseInt(id));
   if (meetupIndex === -1) {
-    res.status(404).json({ message: `Meetup with id ${id} not found` });
+    // res.status(404).json({ message: `Meetup with id ${id} not found` });
+    next(new ErrorHandler(404, `Meetup with id ${id} not found`));
+    return;
   } else {
     meetups.splice(meetupIndex, 1);
     writeMeetupsToFile(meetups);
@@ -185,6 +229,14 @@ app.delete("/meetups/:id", authenticateJWT,(req, res) => {
 
   console.log("Requested url\n", req.url);
   console.log("Deleted!\n");
+});
+
+app.use((err, req, res, next) => {
+  const { statusCode = 500, message } = err;
+  res.status(statusCode).json({ message });
+});
+app.use((req, res, next) => {
+  res.status(404).json({ message: "Not found" });
 });
 
 // Start the server

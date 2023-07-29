@@ -10,5 +10,13 @@
   {
     "email": "devx@dev.com",
     "password": "$2b$10$EURLb1lpb4ghA6bbjVBvVOaa2M9g8vAxziDLwqbnuaxVyKwXYxRdu"
+  },
+  {
+    "email": "devy@dev.com",
+    "password": "$2b$10$yEuKRAj4HO8dN/c0CUA3iuPoUCpLd53csttnj/QbHOOP7RmNST33u"
+  },
+  {
+    "email": "devz@dev.com",
+    "password": "$2b$10$ne4vMUz/UnQpRT/JTVqQYOuRPb63Gvl6/ATz9CaY4mVvz/56/WTZG"
   }
 ]
