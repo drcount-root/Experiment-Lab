@@ -42,7 +42,24 @@ function writeMeetupsToFile(meetups) {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-function validateMeetupDate(meetup) {
+function authenticateJWT(req, res, next) {
+  const token = req.header("Authorization")?.split(" ")[1];
+  if (!token) {
+    return res
+      .status(401)
+      .json({ message: "Access denied, no token provided" });
+  }
+
+  jwt.verify(token, jwtSecret, (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: "Invalid token" });
+    }
+    res.user = user;
+    next();
+  });
+}
+
+function validateMeetupData(meetup) {
   return (
     meetup.title &&
     typeof meetup.title === "string" &&
@@ -98,10 +115,10 @@ app.post("/login", async (req, res) => {
   res.status(200).json({ token, email });
 });
 
-app.post("/meetups", (req, res) => {
+app.post("/meetups",authenticateJWT, (req, res) => {
   const { title, summary, address } = req.body;
 
-  if (!validateMeetupDate({ title, summary, address })) {
+  if (!validateMeetupData({ title, summary, address })) {
     res.status(400).json({ message: "Invalid meetup data" });
     return;
   } else {
@@ -124,11 +141,11 @@ app.get("/meetups", (req, res) => {
   console.log("\nResponse\n", meetups);
 });
 
-app.patch("/meetups/:id", (req, res) => {
+app.patch("/meetups/:id", authenticateJWT,(req, res) => {
   const { id } = req.params;
   const { title, summary, address } = req.body;
 
-  if (!validateMeetupDate({ title, summary, address })) {
+  if (!validateMeetupData({ title, summary, address })) {
     res.status(400).json({ message: "Unable to update meetup data" });
     return;
   } else {
@@ -154,7 +171,7 @@ app.patch("/meetups/:id", (req, res) => {
   }
 });
 
-app.delete("/meetups/:id", (req, res) => {
+app.delete("/meetups/:id", authenticateJWT,(req, res) => {
   const { id } = req.params;
   let meetups = readMeetupsFromFile();
   const meetupIndex = meetups.findIndex((meetup) => meetup.id === parseInt(id));

@@ -6,5 +6,9 @@
   {
     "email": "dev1@dev.com",
     "password": "$2b$10$T0bQ8kN8CLe1LbKMmynfZOzAwvBgT0cEikOOwnWIk9M9aWWzVQ85G"
+  },
+  {
+    "email": "devx@dev.com",
+    "password": "$2b$10$EURLb1lpb4ghA6bbjVBvVOaa2M9g8vAxziDLwqbnuaxVyKwXYxRdu"
   }
 ]
